@@ -257,10 +257,9 @@ def run(image, threshold_value, min_size, max_size, min_infected_percentage):
     
     return cell_data[0]
 
-if __name__ == "__main__":  # do not remove this line   
+if __name__ == "__main__": 
     
     #### Specify which image you want! ####
     image = plt.imread("malaria_1.jpeg")
 
     cells_infected = run(image, threshold_value = 0.038, min_size = 2000, max_size = 5000, min_infected_percentage=0.02)
-    #print(f"{str(cells_infected)} infected cells") 
