@@ -3,61 +3,54 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skimage.color import rgb2gray
 from skimage.filters import sobel
-
-
-def seedfill(im, seed_row, seed_col, fill_color,bckg):
-    """
-    im: The image on which to perform the seedfill algorithm
-    seed_row and seed_col: position of the seed pixel
-    fill_color: Color for the fill
-    bckg: Color of the background, to be filled
-    Returns: Number of pixels filled
-    Behavior: Modifies image by performing seedfill
-    """
-    size = 0  # keep track of patch size
-    n_row, n_col = im.shape
-    front = {(seed_row,seed_col)}  # initial front
-    while len(front) > 0:
-        r, c = front.pop()  # remove an element from front
-        if im[r, c] == bckg: 
-            im[r, c] = fill_color  # color the pixel
-            size+= 1
-            # look at all neighbors
-            for i in range(max(0,r-1), min(n_row,r+2) ):
-                for j in range(max(0,c-1), min(n_col,c+2) ):
-                    # if background, add to front
-                    if im[i,j] == bckg and (i,j) not in front:
-                        front.add((i,j))
-    return size
+import cv2
 
 def fill_cells(edge_image):
     """
     Args:
         edge_image: A black-and-white image, with black background and
-                    white edges
-    Returns: A new image where each closed region is filled with a different
-             grayscale value
+                    white edges.
+    Returns:
+        A new image where the background is black, the edges are white, and
+        each enclosed region is filled with a unique grayscale value.
     """
+    # Ensure the input image is binary (0 for black, 1 for white edges)
+    edge_image = np.uint8(np.clip(edge_image * 255, 0, 255))  # Convert to 0-255 binary
+
+    # Invert the image so the edges are black (0) and the enclosed areas are white (255)
+    inverted_image = 255 - edge_image
+
+    # Step 1: Find all the connected components (regions) in the inverted image
+    num_labels, labels = cv2.connectedComponents(inverted_image)
+
+    print(f"Number of labeled areas is: {num_labels}") # backround + enclosed spaces
+
+    # Create a copy of the original edge image to fill enclosed regions
     filled_image = edge_image.copy()
+
+    # Step 2: Iterate through labeled regions and fill each with a unique grayscale value
     n_regions_found_so_far = 0
-    # start by filling the background to dark gray, from pixel (0,0)
-    s = seedfill(filled_image, 0 , 0, 0.1, 0)
-    for i in range(filled_image.shape[0]):
-        for j in range(filled_image.shape[1]):
-            # if pixel is black, seedfill from here
-            if filled_image[i,j] == 0:
-                col = 0.5 + 0.001 * n_regions_found_so_far
-                seedfill(filled_image, i ,j, col, 0)
-                n_regions_found_so_far+= 1
-    
-    #io.imsave("filled_image.jpg", filled_image)
+    for label in range(1, num_labels):  # Start from 1, as 0 is the background (black)
+        # Generate a unique grayscale value for each region
+        region_fill_color = 128 + (int(128//num_labels) * n_regions_found_so_far)  # Starting from 0.5, incrementing
+        
+        # Ensure the region_fill_color does not exceed 1.0
+        #region_fill_color = min(region_fill_color, 1.0)  # Clamp to 1.0 if it exceeds
 
-    #plt.imshow(filled_image, cmap="hot")
-    #plt.title("Filled Image")  # Optional title for better context
-    #plt.colorbar()
-    #plt.axis('off')  # Optional: turn off axis for a cleaner display
-    #plt.show()
+        # Fill all pixels in this region with the region's unique grayscale value
+        filled_image[labels == label] = region_fill_color  # Scale to 0-255 for visualization
+        n_regions_found_so_far += 1
 
+    '''
+    # Some non bounded areas are ignored in the infection count.
+    # See this image (remove quotes) to visualize, try adjusting threshold
+    filled_image = np.uint8(np.clip(filled_image * 255, 0, 255)) 
+    # Visualize the final filled image with unique grayscale fill
+    plt.imshow(filled_image, cmap='gray')
+    plt.title("Final Image with Unique Grayscale Fill")
+    plt.axis('off')  # Turn off axis for a cleaner image
+    plt.show()
+    '''
     return filled_image
 
 def find_coordinates_for_greyscale(labeled_image, greyscale_val):
@@ -98,7 +91,8 @@ def ensure_rgb_format(image):
 
 def classify_cells(original_image, labeled_image, \
                    min_size, max_size, \
-                   infected_grayscale=0.5, min_infected_percentage=0.02):
+                   infected_grayscale, \
+                    min_infected_percentage):
 
     n_row, n_col = original_image.shape
 
@@ -107,13 +101,14 @@ def classify_cells(original_image, labeled_image, \
 
     # Builds a set of all grayscale values (cells) in the labeled image
     grayscales = {labeled_image[i,j] for i in range(n_row) for j in range(n_col) \
-                  if labeled_image[i,j] >= 0.5 and labeled_image[i,j] < 1}
+                  if labeled_image[i,j] >= 120 and labeled_image[i,j] < 255}
 
     # sets rows and cols to the labeled image array [i,j] 
     n_rows, n_cols = labeled_image.shape
 
     # Total number of cells (before applying the size filter)
     total_cells = len(grayscales)
+    #print(f"total cells is: {total_cells}")
 
     # Initialize a list to track cell sizes
     cell_sizes = []
@@ -166,8 +161,10 @@ def classify_cells(original_image, labeled_image, \
     fig, axs = plt.subplots(2, 2, figsize=(10, 10))
 
     # Plot the labeled image
-    axs[0, 0].imshow(labeled_image, cmap="gray")
-    axs[0, 0].set_title("Grayscale Image")
+    #axs[0, 0].imshow(original_image)
+    #axs[0, 0].set_title("IGrayscale Image")
+    axs[0, 0].imshow(rgb_image)
+    axs[0, 0].set_title("Infected Cells Labeled in Red")
     axs[0, 0].axis('off')
 
     # Histogram of grayscale values in labeled image
@@ -189,7 +186,14 @@ def classify_cells(original_image, labeled_image, \
     axs[1, 0].set_ylabel('Frequency')
 
     # Plot the percentage of infected cells as a pie chart
-    infected_percentage = (infected / total_cells) * 100
+    #infected_percentage = (infected / total_cells) * 100
+
+    if total_cells == 0:
+        print("Warning: No cells detected.")
+        infected_percentage = 0  # Set the infected percentage to 0 if no cells are detected.
+    else:
+        infected_percentage = (infected / total_cells) * 100
+
     axs[1, 1].pie([infected_percentage, 100 - infected_percentage], 
                   labels=['Infected', 'Non-Infected'], autopct='%1.1f%%', colors=['red', 'blue'])
     axs[1, 1].set_title('Percentage of Infected Cells')
@@ -207,7 +211,7 @@ def classify_cells(original_image, labeled_image, \
 
     return infected, rgb_image, infected_cells_coords
 
-def run(image):
+def run(image, threshold_value, min_size, max_size, min_infected_percentage):
 
     fig, axs = plt.subplots(1, 2, figsize=(10, 5))  # 1 row, 2 columns, adjust size as needed
 
@@ -230,9 +234,11 @@ def run(image):
     # Converting the image to graytone
     image_gray = rgb2gray(image)
     image_sobel = sobel(image_gray)
-    image_sobel_T005 = np.where(image_sobel>=0.05,1.0, 0.0)
+    
+    image_sobel_T005 = np.where(image_sobel >= threshold_value, 1.0, 0.0)
     
     n_row, n_col = image_sobel_T005.shape
+
     sobel_clean = image_sobel_T005.copy()
     for i in range(n_row):
         for j in range(n_col):
@@ -240,16 +246,14 @@ def run(image):
                 sobel_clean[i,j] = 0
     image_filled = fill_cells(sobel_clean)
 
-    
-    # Adjust depending on cell size and image resolution
-    min_size = 1000
-    max_size = 5000
-    cell_data = classify_cells(image_gray, image_filled, min_size, max_size)
+    if image_filled is None:
+        print("Error: fill_cells() did not return a valid image.")
 
-    plt.imshow(cell_data[1])
-    plt.title("Infected Cells Labeled in Red")
-    plt.axis('off')  # Optional: turn off axis for a cleaner display
-    plt.show()
+    if image_gray is None:
+        print("Error: labeled_image is None.")
+    
+    infected_grayscale=0.5
+    cell_data = classify_cells(image_gray, image_filled, min_size, max_size, infected_grayscale, min_infected_percentage)
     
     return cell_data[0]
 
@@ -258,5 +262,5 @@ if __name__ == "__main__":  # do not remove this line
     #### Specify which image you want! ####
     image = plt.imread("malaria_1.jpeg")
 
-    cells_infected = run(image)
+    cells_infected = run(image, threshold_value = 0.038, min_size = 2000, max_size = 5000, min_infected_percentage=0.02)
     #print(f"{str(cells_infected)} infected cells") 
