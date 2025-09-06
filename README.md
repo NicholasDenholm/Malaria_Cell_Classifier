@@ -11,11 +11,13 @@ This notebook allows you to classify and analyze cells in a grayscale image usin
 ## Outputs
 - **Original Image**: The image of different cells to be labeled with unique grayscale values from 0.5 - 1.0.
 - **Histogram**: The distribution of pixel values in the inital coloured image.
+![Original Image and Histogram](output_images/originalPhoto_and_Histogram.png)
 
 - **Labeled Image**: The image of different infected cells labeled in red, the rest of the cell pixels are labeled with unique grayscale values from 0.5 - 1.0.
 - **Infected Cell Count**: Graphical representations of the number of cells that are considered infected versus non infected based on the defined threshold.
 - **Distribution of Cell Sizes**: A histogram of the discovered cell objects who are labeled infected or not.
 - **Percentage of Infected Cells**: A pie chart representation of the entire poulation in this image and the percentage breakdown of the two subpopulations.  
+![Final Result](output_images/Final_Output.png)
 
 Feel free to modify the parameters in the juypter notebook or the python file and see the effects on the images in real time.
 
