@@ -9,17 +9,20 @@ This notebook allows you to classify and analyze cells in a grayscale image usin
 3. **Malaria Infected Cell Detection**: Infected cells are identified based on the percentage of dark pixels in each region. The **min_infected_percentage** parameter can be adjusted to define the threshold at which a cell is considered "infected".
 
 ## Outputs
-- **Labeled Image**: The image where different cells are labeled with unique grayscale values from 0.5 - 1.0.
-- **Histogram**: The distribution of pixel values in the labeled image.
-- **Infected Cell Count**: The number of cells that are considered infected based on the defined threshold.
+- **Original Image**: The image of different cells to be labeled with unique grayscale values from 0.5 - 1.0.
+- **Histogram**: The distribution of pixel values in the inital coloured image.
 
-Modify the parameters below and see the effects on the image in real time.
+- **Labeled Image**: The image of different infected cells labeled in red, the rest of the cell pixels are labeled with unique grayscale values from 0.5 - 1.0.
+- **Infected Cell Count**: Graphical representations of the number of cells that are considered infected versus non infected based on the defined threshold.
+- **Distribution of Cell Sizes**: A histogram of the discovered cell objects who are labeled infected or not.
+- **Percentage of Infected Cells**: A pie chart representation of the entire poulation in this image and the percentage breakdown of the two subpopulations.  
+
+Feel free to modify the parameters in the juypter notebook or the python file and see the effects on the images in real time.
 
 ---
 
 ### Note: 
 Make sure image data used in this notebook is pre-processed and formatted correctly for optimal results.
-
 
 The seedfill function is an implementation of a seed-fill algorithm for flood filling in an image, similar to the "paint bucket" tool in graphics software. It works by starting from a given "seed" pixel and filling all connected pixels with a specified color, as long as they have the same background color as the seed.
 
